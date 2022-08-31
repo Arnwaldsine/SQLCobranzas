@@ -1,4 +1,4 @@
-/*CREATE TABLE [PuntosVenta](
+CREATE TABLE [PuntosVenta](
 	[Id] INT IDENTITY(1,1) PRIMARY KEY,
 	[Nro] INT,
 	[Nombre] VARCHAR(100) NOT NULL
@@ -172,14 +172,21 @@ CREATE TABLE [Facturas_NotasDebito](
 )
 GO
 
+CREATE TABLE [Respuestas](
+	[Id] INT IDENTITY(1,2) PRIMARY KEY,
+	[Respuesta] VARCHAR(200) NOT NULL
+)
+
 CREATE TABLE [Gestiones](
 			[Id] INT IDENTITY(1,1) PRIMARY KEY,
 			[ObraSocialId] INT NOT NULL FOREIGN KEY REFERENCES [ObrasSociales]([Id]),
 			[ContactoId] INT NOT NULL FOREIGN KEY REFERENCES [Contactos]([Id]),
 			[FechaContacto] DATE NULL DEFAULT GETDATE(),
-			[RespuestaId] INT NOT NULL,
+			[RespuestaId] INT NOT NULL FOREIGN KEY REFERENCES [Respuestas]([Id]),
 			[FechaProxContacto] DATE NULL DEFAULT DATEADD(day, 14, GETDATE()),
 			[UsuarioId] INT NOT NULL FOREIGN KEY REFERENCES [Usuarios]([Id]),
 			[Observaciones] VARCHAR(MAX) NULL
 )
-GO*/
+
+
+GO
