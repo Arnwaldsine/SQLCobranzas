@@ -1,0 +1,185 @@
+/*CREATE TABLE [PuntosVenta](
+	[Id] INT IDENTITY(1,1) PRIMARY KEY,
+	[Nro] INT,
+	[Nombre] VARCHAR(100) NOT NULL
+)
+GO
+
+CREATE TABLE [Roles](
+		[Id] INT IDENTITY(1,1) PRIMARY KEY,
+		[Rol] VARCHAR(100) NOT NULL
+)
+GO
+
+
+CREATE TABLE [Usuarios] (
+	[Id] INT IDENTITY(1,1) PRIMARY KEY,
+	[PuntoVentaId] INT FOREIGN KEY REFERENCES [PuntosVenta]([Id])  ON DELETE CASCADE ON UPDATE CASCADE,
+	[Nombre] VARCHAR(120) NOT NULL,
+	[Apellido] VARCHAR(120) NOT NULL,
+	[Email] VARCHAR(200) NOT NULL,
+	[PasswordHash] VARCHAR(MAX) NULL,
+	[SecurityStamp] VARCHAR(200) NULL,
+	[Confirmado] BIT NULL,
+	[TokenConfirmacion] VARCHAR(200) NULL,
+	[FechaRegistro] DATE NULL DEFAULT GETDATE(),
+)
+GO
+CREATE TABLE [Roles_Usuarios](
+	[UsuarioId] INT NOT NULL FOREIGN KEY REFERENCES [Usuarios]([Id]) ON DELETE CASCADE,
+	[RolId] INT NOT NULL FOREIGN KEY REFERENCES [Roles]([Id]) ON DELETE CASCADE,
+	[FechaExpiracion] DATE NULL DEFAULT DATEADD(Day,3,GETDATE())
+)
+GO
+CREATE TABLE [Logins] (
+	[Id] UNIQUEIDENTIFIER NOT NULL,
+	[UsuarioId] INT FOREIGN KEY REFERENCES [Usuarios]([Id]) ON DELETE CASCADE ON UPDATE CASCADE,
+	[LoginProvider]   NVARCHAR (MAX)   NOT NULL,
+    [ProviderKey]     NVARCHAR (MAX)   NOT NULL
+)
+GO
+
+CREATE TABLE [TiposPrestador] (
+		[Id] INT IDENTITY(1,1) PRIMARY KEY,
+		[Tipo] VARCHAR(100) NOT NULL
+)
+GO
+
+CREATE TABLE [ObrasSociales](
+		[Id] INT IDENTITY(1,1) PRIMARY KEY,
+		[TipoPrestadorId] INT FOREIGN KEY REFERENCES [TiposPrestador]([Id]),
+		[RNOS] VARCHAR(100) NOT NULL,
+		[Nombre] VARCHAR(MAX) NOT NULL,
+		[CUIT] VARCHAR(20) NOT NULL,
+		[Tel] VARCHAR(100) NULL,
+		[Direccion] VARCHAR(100) NULL,
+		[Pagina] VARCHAR(200) NULL
+)
+GO
+
+CREATE TABLE [Contactos](
+			[Id] INT IDENTITY(1,1) PRIMARY KEY,
+			[ObraSocialId] INT FOREIGN KEY REFERENCES [ObrasSociales]([Id]) ON DELETE CASCADE,
+			[Contacto] VARCHAR(150) NOT NULL,
+			[Sector] VARCHAR(100) NOT NULL,
+			[Horario] VARCHAR(100) NULL,
+			[Telefono] VARCHAR(100) NULL,
+			[Mail] VARCHAR(100) NULL,
+			[Observaciones] VARCHAR(100) NULL
+)			
+			
+GO
+
+
+CREATE TABLE [Estados](
+	[Id] INT IDENTITY(1,1) PRIMARY KEY,
+	[Estado] VARCHAR(150) NOT NULL
+)
+GO
+
+CREATE TABLE [Facturas](
+	[Id] INT PRIMARY KEY IDENTITY(1,1),
+	[NRO] AS (CONCAT(
+	RIGHT('00000'+CAST(([PuntoVentaId]) as VARCHAR(50)),5)
+	,'-',
+	RIGHT('00000000'+CAST(([Id]) AS VARCHAR(50)),8)
+	)
+	),
+	[ObraSocialId] INT NOT NULL FOREIGN KEY REFERENCES [ObrasSociales]([Id]) ON DELETE CASCADE,
+	[PuntoVentaId] INT NOT NULL FOREIGN KEY REFERENCES [PuntosVenta]([Id]) ON DELETE CASCADE,
+	[FechaEmision] DATE NULL DEFAULT GETDATE(),
+	[Importe] DECIMAL(10,2) NOT NULL,
+	[Cobrado] DECIMAL(10,2) NULL DEFAULT 0,
+	[FechaUltimoPago] DATE NULL,
+	[Debe] AS ([Importe]-[Cobrado]) PERSISTED,
+	[EstadoId] INT NULL FOREIGN KEY REFERENCES [Estados]([Id]),
+	[Observaciones] VARCHAR(MAX) NOT NULL
+)
+GO
+
+CREATE TABLE [Recibos](
+	[Id] INT IDENTITY(1,1) PRIMARY KEY,
+	[Nro] AS (
+		CONCAT('00004',
+		'-',
+		RIGHT(
+			'00000000'+CAST([Id] as VARCHAR(50)),
+			8
+			)
+		)
+	) 
+	PERSISTED,
+	[ObraSocialId] INT NOT NULL FOREIGN KEY REFERENCES [ObrasSociales]([Id]),
+	-- UPDATE/SET con Stored procedure
+	[Total] DECIMAL(10,2) NULL,
+	[Fecha] DATE NULL DEFAULT GETDATE(),
+	[ANULADO] BIT NULL DEFAULT 0,
+	[Observaciones] VARCHAR(200) NULL,
+	
+)
+GO
+
+CREATE TABLE [FormasPago](
+	[Id] INT IDENTITY(1,1) PRIMARY KEY,
+	[Forma] VARCHAR(100) NOT NULL
+)
+GO
+
+CREATE TABLE [Bancos](
+	[Id] INT IDENTITY(1,1) PRIMARY KEY,
+	[Nombre] VARCHAR(150) NOT NULL
+)
+GO
+
+CREATE TABLE [Facturas_Recibos](
+	[ReciboId] INT NOT NULL FOREIGN KEY REFERENCES [Recibos]([Id]),
+	[FacturaId] INT NOT NULL FOREIGN KEY REFERENCES [Facturas]([Id]),
+	[FormaPagoId] INT NOT NULL FOREIGN KEY REFERENCES [FormasPago]([Id]),
+	[NroChequeTransf] VARCHAR(100) NOT NULL,
+	[NroReciboTes] VARCHAR(100) NOT NULL,
+	[BancoId] INT FOREIGN KEY REFERENCES [Bancos]([Id]),
+	[SubTotal] DECIMAL(10,2) NOT NULL
+)
+GO
+
+CREATE TABLE [NotasCredito] (
+		[Id] INT IDENTITY(1,1) PRIMARY KEY,
+		[Nro] AS (
+		CONCAT('00003',
+		'-',
+		RIGHT(
+			'00000000'+CAST([Id] as VARCHAR(50)),
+			8
+			))),
+		[FechaEmision] DATE NULL DEFAULT GETDATE(),
+		[ObraSocialId] INT NOT NULL FOREIGN KEY REFERENCES [ObrasSociales]([Id]),
+		[Total] DECIMAL(10,2) NULL,
+		[Observaciones] VARCHAR(200) NULL
+)
+GO
+
+CREATE TABLE [Facturas_NotasCredito](
+	[FacturaId] INT NOT NULL FOREIGN KEY REFERENCES [Facturas]([Id]),
+	[NotaCreditoId] INT NOT NULL FOREIGN KEY REFERENCES [NotasCredito]([Id]),
+	[Monto] DECIMAL(10,2) NOT NULL
+)
+GO
+
+CREATE TABLE [Facturas_NotasDebito](
+	[FacturaId] INT NOT NULL FOREIGN KEY REFERENCES [Facturas]([Id]),
+	[NotaDebitoId] INT NOT NULL FOREIGN KEY REFERENCES [NotasDebito]([Id]),
+	[Monto] DECIMAL(10,2) NOT NULL
+)
+GO
+
+CREATE TABLE [Gestiones](
+			[Id] INT IDENTITY(1,1) PRIMARY KEY,
+			[ObraSocialId] INT NOT NULL FOREIGN KEY REFERENCES [ObrasSociales]([Id]),
+			[ContactoId] INT NOT NULL FOREIGN KEY REFERENCES [Contactos]([Id]),
+			[FechaContacto] DATE NULL DEFAULT GETDATE(),
+			[RespuestaId] INT NOT NULL,
+			[FechaProxContacto] DATE NULL DEFAULT DATEADD(day, 14, GETDATE()),
+			[UsuarioId] INT NOT NULL FOREIGN KEY REFERENCES [Usuarios]([Id]),
+			[Observaciones] VARCHAR(MAX) NULL
+)
+GO*/
